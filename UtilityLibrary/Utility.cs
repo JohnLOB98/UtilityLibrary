@@ -3,20 +3,21 @@ using System.Data;
 //using System.Drawing;
 using System.Reflection;
 using System.Data.SqlClient;
+using System.Windows;
 
 namespace UtilityLibrary {
 
-    //public class 
     public class Utility {
 
         public class Query {
+
             /// <summary>
             /// <para>Get a table from the delcared query.</para>
             /// <para>'query': The command that is going to be executed.</para>
             /// </summary>
-            public static DataTable GetDataTable(string query) {
+            public static bool GetDataTable(out DataTable dt, string query) {
 
-                DataTable dt = new();
+                dt = new();
 
                 try {
                     SqlConnection con = General.GetDBConnection("Connection");
@@ -26,18 +27,36 @@ namespace UtilityLibrary {
                     SqlDataAdapter da = new(cmd);
                     con.Close();
                     da.Fill(dt);
-                } catch (Exception ex) {
-                    MessageBox.Show(ex.Message, "Error");
+                    return true;
+                } catch {
+                    return false;
                 }
+            }
+            public static bool GetDataTable(out DataTable dt, out string message, string query) {
 
-                return dt;
+                dt = new();
+
+                try {
+                    SqlConnection con = General.GetDBConnection("Connection");
+                    SqlCommand cmd = new(query, con);
+
+                    con.Open();
+                    SqlDataAdapter da = new(cmd);
+                    con.Close();
+                    da.Fill(dt);
+                    message = "";
+                    return true;
+                } catch (Exception ex) {
+                    message = ex.Message;
+                    return false;
+                }
             }
 
             /// <summary>
             /// <para>Execute Transactions as UPDATE, INSERT and DELETE</para>
             /// <para>'query': The command that is going to be executed.</para>
             /// </summary>
-            public static bool Transaction(string query) {
+            public static bool Transaction(out string message, string query) {
 
                 try {
                     SqlConnection con = General.GetDBConnection("Connection");
@@ -45,33 +64,35 @@ namespace UtilityLibrary {
                     con.Open();
                     cmd.ExecuteNonQuery();
                     con.Close();
+                    message = "";
                     return true;
                 } catch (Exception ex) {
-                    MessageBox.Show(ex.Message, "Error Transaction 1.0");
+                    message = ex.Message;
+                    //MessageBox.Show(ex.Message, "Error Transaction 1.0");
                     return false;
                 }
             }
 
             /// <summary>
-            /// <para> Execute Transaction as UPDATE with value</para>
+            /// <para> Execute Transaction UPDATE with value</para>
             /// <para>'query': The command that is going to be executed.</para>
-            /// <para>'value': The value that will be inserted in the </para>
+            /// <para>'value': The value that will be inserted in the database</para>
             /// </summary>
-            public static bool Transaction(string query, string value) {
+            //public static bool Transaction(string query, string value) {
 
-                try {
-                    SqlConnection con = General.GetDBConnection("Connection");
-                    SqlCommand cmd = new(query, con);
-                    cmd.Parameters.AddWithValue("@Value", value);
-                    con.Open();
-                    cmd.ExecuteNonQuery();
-                    con.Close();
-                    return true;
-                } catch (Exception ex) {
-                    MessageBox.Show(ex.Message, "Error Transaction 1.1");
-                    return false;
-                }
-            }
+            //    try {
+            //        SqlConnection con = General.GetDBConnection("Connection");
+            //        SqlCommand cmd = new(query, con);
+            //        cmd.Parameters.AddWithValue("@Value", value);
+            //        con.Open();
+            //        cmd.ExecuteNonQuery();
+            //        con.Close();
+            //        return true;
+            //    } catch (Exception ex) {
+            //        MessageBox.Show(ex.Message, "Error Transaction 1.1");
+            //        return false;
+            //    }
+            //}
         }
 
         public class General {
@@ -87,12 +108,17 @@ namespace UtilityLibrary {
             /// <summary>
             /// <para>Get the max value of the query.</para>
             /// <para>Example: $"SELECT MAX({ colName }) AS { colName } FROM { tableName }"</para>
+            /// <para>If the return value is null, there is an error.</para>
             /// </summary>
-            public static long HighestID(string colName, string tableName) {
+            public static long? MaxValue(string colName, string tableName) {
 
                 string query = $"SELECT MAX({ colName }) AS { colName } FROM { tableName }";
-                DataTable dt = Query.GetDataTable(query);
-                return dt.Rows[0].Field<long?>("ID") != null ? dt.Rows[0].Field<long>("ID") + 1 : 0;
+
+                if (Query.GetDataTable(out DataTable dt, query)) {
+                    return dt.Rows[0].Field<long?>(colName) != null ? dt.Rows[0].Field<long>(colName) + 1 : 0;
+                } else {
+                    return null;
+                }
             }
 
             // TIME FORMATS UTILITY
@@ -104,7 +130,6 @@ namespace UtilityLibrary {
                 DateTime datetime = TimeZoneInfo.ConvertTime(DateTime.Now, timeZoneInfo);
                 return datetime.ToString("MM/dd/yyyy HH:mm");
             }
-
 
             // VALIDATION FORMAT UTILITY
             /// <summary>
@@ -119,10 +144,10 @@ namespace UtilityLibrary {
             }
 
             /// <summary>
-            /// <para>Detect if the if a string number already has a dot.</para>
+            /// <para>Detect if the an string number already has a dot.</para>
             /// <para>To avoid the income of the new dot.</para>
             /// </summary>
-            public static bool AlreadyHasDot(string s, char key) {
+            public static bool HasDot(string s, char key) {
 
                 foreach (char c in s) {
                     if (c == '.') return false;
@@ -130,13 +155,12 @@ namespace UtilityLibrary {
                 if (key != '.') return false;
 
                 return true;
-
             }
 
             /// <summary>
-            /// <param name="number">Detect if a string number has less than 3 decimals.</param>
+            /// <param>Detect if a string number has less than 3 decimals.</param>
             /// </summary>
-            public static bool HasLessThreeDecimals(string number) {
+            public static bool LessThreeDecimals(string number) {
 
                 int count = 0;
                 for (int i = number.Length - 1; i > -1; --i) {
@@ -147,38 +171,37 @@ namespace UtilityLibrary {
                 return true;
             }
 
-
-            // CONSTRUCTION UTILITY
+            // CONSTRUCTION WINDOW UTILITY
             /// <summary>
-            /// <param name="WndName">Generate a new window by name.</param>
+            /// <param>Generate a new window by name.</param>
             /// </summary>
-            public static void InitializeWindow(string WndName) {
+            //public static void InitializeWindow(string WndName) {
 
-                WndPrincipal WP = new();
-                foreach (Form F in Application.OpenForms) {
-                    if (F.Name == "WndPrincipal") WP = (F as WndPrincipal)!;
-                }
-                foreach (Form mdi in WP.MdiChildren) mdi.Close();
+            //    WndPrincipal WP = new();
+            //    foreach (Form F in Application.OpenForms) {
+            //        if (F.Name == "WndPrincipal") WP = (F as WndPrincipal)!;
+            //    }
+            //    foreach (Form mdi in WP.MdiChildren) mdi.Close();
 
-                var f = Assembly.GetExecutingAssembly().GetTypes()
-                    .Where(a => a.BaseType == typeof(Form) && a.Name == WndName)
-                    .FirstOrDefault();
+            //    var f = Assembly.GetExecutingAssembly().GetTypes()
+            //        .Where(a => a.BaseType == typeof(Form) && a.Name == WndName)
+            //        .FirstOrDefault();
 
-                if (f == null) return; // If there is no form with the given frmname
+            //    if (f == null) return; // If there is no form with the given frmname
 
-                Form Wnd = (Form)Activator.CreateInstance(f)!;
+            //    Form Wnd = (Form)Activator.CreateInstance(f)!;
 
-                Wnd.ControlBox = false;
-                Wnd.FormBorderStyle = FormBorderStyle.None;
-                Wnd.StartPosition = FormStartPosition.CenterParent;
-                Wnd.WindowState = FormWindowState.Maximized;
-                Wnd.MdiParent = WP;
-                Wnd.Left = 0;
-                Wnd.Top = 0;
-                Wnd.Dock = DockStyle.Fill;
-                Wnd.Show();
-                GC.Collect();
-            }
+            //    Wnd.ControlBox = false;
+            //    Wnd.FormBorderStyle = FormBorderStyle.None;
+            //    Wnd.StartPosition = FormStartPosition.CenterParent;
+            //    Wnd.WindowState = FormWindowState.Maximized;
+            //    Wnd.MdiParent = WP;
+            //    Wnd.Left = 0;
+            //    Wnd.Top = 0;
+            //    Wnd.Dock = DockStyle.Fill;
+            //    Wnd.Show();
+            //    GC.Collect();
+            //}
 
             /// <summary>
             /// Get the ID of the connected User in the application.
